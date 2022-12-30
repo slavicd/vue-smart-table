@@ -2,7 +2,10 @@
     <div> <!-- this is needed to be able to stopPropagation() -->
         <select :class="{'form-select': true, 'text-success': nonDefaultSelected}" @change.stop="applyFilter(f, $event)">
             <option value="">--all--</option>
-            <option v-for="(opLabel, opKey) in f.filter.options"
+            <option v-if="isArray(f.filter.options)" v-for="(op) in f.filter.options"
+                    :selected="isSelected(op)"
+                    :value="op">{{op}}</option>
+            <option v-if="!isArray(f.filter.options)" v-for="(opLabel, opKey) in f.filter.options"
                     :selected="isSelected(opKey)"
                     :value="opKey">{{opLabel}}</option>
         </select>
@@ -46,6 +49,10 @@ export default {
                 filter[key] = event.target.value;
             }
             this.$emit("change", Object.assign(vQuery, filter));
+        },
+
+        isArray(v) {
+            return Array.isArray(v);
         },
 
         isSelected(v) {

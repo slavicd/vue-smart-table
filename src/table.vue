@@ -4,12 +4,12 @@
 <template>
     <div>
         <div class="loader-container">
-            <p class="loader py-5" v-if="isLoading"><loader-icon /></p>
+            <p class="loader py-5" v-if="isLoading"><span class="lds-dual-ring"></span></p>
         </div>
 
         <p v-if="errorMessage" class="alert alert-danger">{{ errorMessage}}</p>
 
-        <table :class='{"table": true, "table-striped": !crudEnabled, "table-hover": crudEnabled , blurred: isLoading}'>
+        <table :class='{"table": true, "table-striped": true , blurred: isLoading}'>
             <thead>
             <tr>
                 <th v-if="actionsEnabled">&nbsp;</th>
@@ -17,9 +17,8 @@
                     @click="toggleSorting(col)"
                 >
                     {{ columnLabel(col) }}
-                    <i v-if="col.sortable" :class="headCellClasses(col)"></i>
+                    <i v-if="col.sortable" :class="headSortClasses(col)"></i>
                 </th>
-                <th v-if="crudEnabled"></th>
             </tr>
 
             <!--filters row-->
@@ -35,14 +34,6 @@
             </thead>
 
             <tbody v-if="objects">
-            <tr v-if="crudEnabled">
-                <td v-if="actionsEnabled"></td>
-                <td>
-                    <button class="btn btn-sm btn-success" @click="addRow"><i class="bi-plus"></i></button>
-                </td>
-                <td v-for="f in fields.slice(1)" :class="f.classes"></td>
-                <td v-if="crudEnabled"></td>
-            </tr>
 
             <tr v-for="(o, idx) in objects.data" :key="o.id" :class="{'table-active': o.editMode}">
                 <td v-if="actionsEnabled">
@@ -52,7 +43,7 @@
                 <td v-if="!o.editMode" v-for="(f, fidx) in fields" :key="o.id + '-' + fidx"
                     :class="f.classes"
                     :style="f.cellStyle ? f.cellStyle(o) : false">
-                    <component v-if="f.component" :is="f.component" :o="o" ></component>
+                    <component v-if="f.component" :is="f.component" :o="o" :data="f.componentData" ></component>
                     <template v-if="!f.component">{{ o[f.key] }}</template>
                 </td>
 
@@ -60,23 +51,6 @@
                     <em>
                         {{ o.id ? o.id : "new" }}
                     </em>
-                </td>
-
-                <td v-if="o.editMode" :colspan="fields.length-1">
-                    <edit-form :object="o"
-                               :store="resourceStore"
-                               @reset="onRowReset(idx)"
-                               @updated="onRowUpdated"
-                               @created="onRowCreated"
-                               @deleted="onRowDeleted"
-                    />
-                </td>
-
-                <td v-if="crudEnabled" class="text-end">
-                    <router-link v-if="dedicatedEditPage" :to="{name: 'models.show.main', params: { id: o.id }}" class="btn btn-sm btn-outline-secondary">
-                        <span class="bi-pencil-square"></span>
-                    </router-link>
-                    <button v-if="!dedicatedEditPage" class="btn btn-sm btn-outline-secondary" @click="toggleEditRow(idx)"><span class="bi-pencil-square"></span></button>
                 </td>
             </tr>
             </tbody>
@@ -87,7 +61,6 @@
                 <td v-for="f in fields" :class="f.classes">
                     <template v-if="f.total">{{ total(f) }}</template>
                 </td>
-                <td v-if="crudEnabled"></td>
             </tr>
             </tfoot>
         </table>
@@ -137,13 +110,13 @@
 
 
 <script>
-import handleServerError from  "@app/util/error-handler";
-//import {debounce} from "lodash";
-import EditForm from "@app/components/admin/crud-form";
+import handleServerError from  "./util/error-handler";
 import FilterSelector from "./filters/filter-selector";
 import FilterNumber from "./filters/filter-number";
 import FilterText from "./filters/filter-text";
 import FilterDateRange from "./filters/filter-date-range";
+import axios from "axios";
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
 export default {
     name: "entropi-smart-table",
@@ -155,10 +128,6 @@ export default {
         actionsEnabled: {
             type: Boolean,
             default: false
-        },
-        crudEnabled: {
-            type: Boolean,
-            default: false,
         },
         dedicatedEditPage: {
             type: Boolean,
@@ -175,18 +144,21 @@ export default {
         query: {type: Object},
         useBrowserUrl: {
             type: Boolean,
-            default: true
+            default: false
         },
         pageSize: {
             type: Number,
         },
         searchPlaceholder: {},
+        sortingClasses: {
+            type: Object,
+            default: {}
+        }
     },
 
     emits: ["sortingChanged"],
 
     components: {
-        "edit-form": EditForm,
         "filter-selector": FilterSelector,
         "filter-number": FilterNumber,
         "filter-text": FilterText,
@@ -305,7 +277,7 @@ export default {
             this.axiosController = new AbortController();
 
             try {
-                const response = await axios.get("api/" + this.resource, {
+                const response = await axios.get(this.resource, {
                     params: this.vQuery,
                     signal: this.axiosController.signal
                 });
@@ -324,21 +296,27 @@ export default {
             this.isLoading = false;
         },
 
-        headCellClasses(col) {
+        headSortClasses(col) {
             let classes = [];
 
             if (!col.sortable) {
                 return classes;
             }
 
+            const sortClasses = Object.assign({
+                "default": "bi-caret-up",
+                "sortedAsc": "bi-caret-up-fill",
+                "sortedDesc": "bi-caret-down-fill",
+            }, this.sortingClasses)
+
             if (!this.isSortedBy(col.key)) {
-                classes.push("bi-caret-up");
+                classes.push(sortClasses.default);
             }
             if (this.isSortedBy(col.key, "asc")) {
-                classes.push("bi-caret-up-fill");
+                classes.push(sortClasses.sortedAsc);
             }
             if (this.isSortedBy(col.key, "desc")) {
-                classes.push("bi-caret-down-fill");
+                classes.push(sortClasses.sortedDesc);
             }
 
             return classes;
@@ -539,6 +517,7 @@ tr:hover td.preview {
 .loader {
     position: absolute;
     left: 50%;
+    top: 10rem;
     transform: translate(-50%, 0);
     z-index: 100;
     display: inline-block;
@@ -546,4 +525,31 @@ tr:hover td.preview {
 tfoot td {
     font-style: italic;
 }
+
+/*loader icon*/
+.lds-dual-ring {
+    display: inline-block;
+    width: 80px;
+    height: 80px;
+}
+.lds-dual-ring:after {
+    content: " ";
+    display: block;
+    width: 64px;
+    height: 64px;
+    margin: 8px;
+    border-radius: 50%;
+    border: 6px solid #6dc084;
+    border-color: #6dc084 transparent #6dc084 transparent;
+    animation: lds-dual-ring 1.2s linear infinite;
+}
+@keyframes lds-dual-ring {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 </style>

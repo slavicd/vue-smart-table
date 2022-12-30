@@ -6,9 +6,8 @@
         "name": "Slavic Dragovtev"
     },
     "dependencies": {
+        "axios": "^1.0",
         "vue": "^3.0"
     },
-    "exports": {
-        ".": "./src"
-    }
+    "main": "main.js"
 }
