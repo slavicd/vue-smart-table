@@ -1,0 +1,14 @@
+{
+    "name": "entropi-vue-smart-table",
+    "version": "0.1.0",
+    "author": {
+        "email": "slavic@entropi.dev",
+        "name": "Slavic Dragovtev"
+    },
+    "dependencies": {
+        "vue": "^3.0"
+    },
+    "exports": {
+        ".": "./src"
+    }
+}
