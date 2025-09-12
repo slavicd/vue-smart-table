@@ -1,299 +1,216 @@
-<!--This is a component that takes the identifier of an app resource (e.g. user, model, order) and-->
-<!--makes a browsing table for it.-->
-
 <template>
     <div>
-        <div class="loader-container">
-            <p class="loader py-5" v-if="isLoading"><span class="lds-dual-ring"></span></p>
-        </div>
-
-        <p v-if="errorMessage" class="alert alert-danger">{{ errorMessage}}</p>
-
-        <table :class='{"table": true, "table-striped": true , blurred: isLoading}'>
+        <table :class="{table: true, 'table-striped': true, blurred: isLoading}">
             <thead>
             <tr>
-                <th v-if="actionsEnabled">&nbsp;</th>
-                <th v-for="col in fields" :class="Object.assign({ sortable: col.sortable}, col.classes)"
+                <th v-if="bulkActionsEnabled"><input type="checkbox" @click="toggleSelectAll" ref="selectall" title="check/uncheck all on page" /></th>
+                <th v-for="col in computedTableHeader" :key="'th_' + col.key" :class="Object.assign({ sortable: col.sortable}, col.classes)"
                     @click="toggleSorting(col)"
                 >
                     {{ columnLabel(col) }}
                     <i v-if="col.sortable" :class="headSortClasses(col)"></i>
                 </th>
-            </tr>
+                <th>
+                    <div class="dropdown">
+                        <button class="btn btn-sm" data-bs-toggle="dropdown" aria-expanded="false" type="button">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
+                                <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/>
+                                <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/>
+                            </svg>
+                        </button>
 
-            <!--filters row-->
-            <tr v-if="!disableFilter">
-                <th v-if="actionsEnabled"></th>
-                <th v-for="f in fields" :class="f.classes">
-                    <filter-selector v-if="f.filter && f.filter.type=='selector'" :f="f" :vQuery="vQuery" @change="onHeaderFilterChange" />
-                    <filter-number v-if="f.filter && f.filter.type=='number'" :f="f" :vQuery="vQuery" @change="onHeaderFilterChange" />
-                    <filter-text v-if="f.filter && f.filter.type=='text'" :f="f" :vQuery="vQuery" @change="onHeaderFilterChange" />
-                    <filter-date-range v-if="f.filter && f.filter.type=='dateRange'" :f="f" :vQuery="vQuery" @change="onHeaderFilterChange" />
+                        <ul class="dropdown-menu">
+                            <li v-for="f in customizableFields">
+                                <label class="dropdown-item" href="#" @click.stop>
+                                    <input type="checkbox" :value="f.key" v-model="tableHeader" /> {{ columnLabel(f) }}
+                                </label>
+                            </li>
+                        </ul>
+                    </div>
                 </th>
             </tr>
             </thead>
 
-            <tbody v-if="objects">
-
-            <tr v-for="(o, idx) in objects.data" :key="o.id" :class="{'table-active': o.editMode}">
-                <td v-if="actionsEnabled">
-                    <input type="checkbox" name="engross[]" :id="id + '-engros-' + o.id" >
+            <tbody v-if="rows">
+            <tr v-for="(o, idx) in rows" :key="o.id" >
+                <td v-if="bulkActionsEnabled">
+                    <input type="checkbox" v-model="selected" :value="o.id" :id="id + '-engros-' + o.id" title="check to perform bulk actions" >
                 </td>
 
-                <td v-if="!o.editMode" v-for="(f, fidx) in fields" :key="o.id + '-' + fidx"
+                <td v-for="(f, fidx) in computedTableHeader" :key="o.id + '-' + fidx"
                     :class="f.classes"
                     :style="f.cellStyle ? f.cellStyle(o) : false">
                     <component v-if="f.component" :is="f.component" :o="o" :data="f.componentData" ></component>
-                    <template v-if="!f.component">{{ o[f.key] }}</template>
+                    <template v-if="!f.component">{{ formatCellValue(o[f.key], f.type) }}</template>
                 </td>
 
-                <td v-if="o.editMode">
-                    <em>
-                        {{ o.id ? o.id : "new" }}
-                    </em>
+                <td>
+                    <actions-cell v-if="actions" :o="o" :actions="actions" @triggered="onActionTriggered"></actions-cell>
                 </td>
             </tr>
             </tbody>
 
-            <tfoot v-if="objects && columnTotalsPresent">
+            <tfoot v-if="bulkActionsEnabled">
             <tr>
-                <td v-if="actionsEnabled"></td>
-                <td v-for="f in fields" :class="f.classes">
-                    <template v-if="f.total">{{ total(f) }}</template>
+                <td :colspan="computedTableHeader.length+2">
+                    <div class="input-group">
+                        <select class="form-select" v-model="actionScope">
+                            <option value="page" :disabled="groupActionsDisabled">with <span v-if="selected.length">{{selected.length}}</span> selected on page</option>
+                            <option value="all">with all {{data.meta.total}} results</option>
+                        </select>
+                        <select class="form-select" v-model="selectedGroupAction">
+                            <option value="">select action</option>
+                            <option v-for="(action, actionKey) in computedActions" :value="actionKey">{{ action.label ? action.label : action.key }}</option>
+                        </select>
+                        <button class="btn btn-primary" :disabled="groupActionBtnDisabled" type="button" @click="doGroupAction">Perform</button>
+                    </div>
                 </td>
             </tr>
             </tfoot>
         </table>
 
-        <div v-if="objects" :class="{row: 1, blurred: isLoading}">
-            <div class="col-md-6">
-                <button :disabled="objects.meta.current_page==1"
-                        :class="{btn: true, 'btn-sm': true, 'btn-secondary': true, disabled: objects.meta.current_page==1}"
-                        @click="clickedFirst"
-                >First</button>
-                &nbsp;
-                <button :disabled="!objects.links.prev"
-                        :class="{btn: true, 'btn-sm': true, 'btn-secondary': true, disabled: !objects.links.prev}"
-                        @click="clickedPrevious"
-                >Prev</button>
-                <span class="page-number">{{ objects.meta.current_page }}</span>
-                <button :class="{btn: true, 'btn-sm': true, 'btn-secondary': true, disabled: !objects.links.next}"
-                        :disabled="!objects.links.next"
-                        @click="clickedNext"
-                >Next</button>
-                &nbsp;
-                <button :disabled="objects.meta.current_page==objects.meta.last_page"
-                        :class="{btn: true, 'btn-sm': true, 'btn-secondary': true, disabled: objects.meta.current_page==objects.meta.last_page}"
-                        @click="clickedLast"
-                >Last</button>
-            </div>
-
-            <div class="paginator-stats col-md-6">
-                <template v-if="objects.data.length">
-                    <!--Showing items {{ objects.meta.from }} to {{ objects.meta.to }} of total {{ objects.meta.total}}.-->
-                    Showing
-                    <select v-model="localPageSize" @change="onPageSizeChange" class="">
-                        <option>15</option>
-                        <option>50</option>
-                        <option>200</option>
-                        <option>1000</option>
-                    </select>
-                    items of total {{ objects.meta.total}}.
-                </template>
-                <template v-if="objects.data.length==0">
-                    <em>There are no results.</em>
-                </template>
-            </div>
+        <div v-if="rows" :class="{row: 1, blurred: isLoading}">
+            <c-pagination :data="data"
+                          :page-size="pageSize"
+                          @pagination="onPagination"
+                          @pageSizeChange="onPageSizeChange"
+            />
         </div>
     </div>
 </template>
 
-
 <script>
-import handleServerError from  "./util/error-handler";
-import FilterSelector from "./filters/filter-selector";
-import FilterNumber from "./filters/filter-number";
-import FilterText from "./filters/filter-text";
-import FilterDateRange from "./filters/filter-date-range";
-import axios from "axios";
-axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
-export default {
-    name: "entropi-smart-table",
+import {defineComponent} from 'vue';
+import pagination from "./pagination.vue";
+import {columnLabel} from "./helpers";
+import ActionsCell from "./actions-cell.vue";
 
+export default defineComponent({
+    id: 'programs-table',
+    name: "programs-table",
+    emits: [
+        "query",
+        "actionTriggered",
+    ],
+    components: {
+        "c-pagination": pagination,
+        ActionsCell
+    },
     props: {
-        resource: {type: String, required: true},
-        fields: {type: Array, required: true},
         id: String,   // used for unique markup identifiers, etc.
-        actionsEnabled: {
+        data: {
+            type: Object
+        },
+        query: {
+            type: Object,
+            default: {},
+        },
+        fields: {
+            type: Array,
+            required: true,
+        },
+        bulkActionsEnabled: {
             type: Boolean,
             default: false
         },
-        dedicatedEditPage: {
-            type: Boolean,
-            default: false,
-        },
-        resourceStore: {
-            // required if crud is enabled
+        actions: {
             type: Object,
         },
-        disableFilter: {
-            type: Boolean,
-            default: false,
-        },
-        query: {type: Object},
-        useBrowserUrl: {
-            type: Boolean,
-            default: false
-        },
-        pageSize: {
-            type: Number,
-        },
-        searchPlaceholder: {},
         sortingClasses: {
             type: Object,
             default: {}
+        },
+        isLoading: {
+            type: Boolean
+        },
+        storagePfx: {
+            type: String,
+            default: "st_table"
         }
-    },
-
-    emits: ["sortingChanged"],
-
-    components: {
-        "filter-selector": FilterSelector,
-        "filter-number": FilterNumber,
-        "filter-text": FilterText,
-        "filter-date-range": FilterDateRange,
-    },
-
-    created() {
-        let vQuery = {};
-
-        if (this.query) {
-            // query provided as props from client code
-            vQuery = Object.assign({}, vQuery, this.query);
-        }
-
-        this.vQuery = vQuery;
-
-        this.$watch(() => this.vQuery, function(newVal) {
-            //console.debug("Got new vQuery: ", newVal);
-            this.fetchData();
-        }, {deep: true});
-
-        this.$watch(() => this.query, function(newVal) {
-            this.vQuery = Object.assign({}, newVal);
-        });
-
-        this.fetchData();
-
-        const that = this;
-        // this.debounceSearch = debounce((e) => {
-        //     that.search = e.target.value;
-        //     that.lastSearchInput = Date.now();
-        // }, this.searchDebounceTime);
-
-        // initialize page size
-        if (this.query && this.query.ps) {
-            this.localPageSize = parseInt(this.query.ps);
-        }
-        // only after, start watching localPageSize
-        this.$watch(() => this.localPageSize, function(newVal, oldVal) {
-            let vq = Object.assign({}, this.vQuery);
-            if (oldVal!==null) {
-                delete vq.pg
-                //toReplace.pg=null;
-            }
-            this.replaceVQuery(Object.assign(vq, {ps: newVal}));
-        });
-    },
-
-    beforeUnmount() {
-        //this.debounceSearch.cancel();
-        this.axiosController && this.axiosController.abort();
     },
 
     data() {
         return {
-            objects: null,
-            isLoading: true,
-            axiosController: null,
-            search: null,
-            searchRaw: (this.query && this.query.q) ? this.query.q + "" : "",
-            searchDebounceTime: 600,
-            localPageSize: 15,
-            errorMessage: null,
-            vQuery: null,   // virtual query - abstraction of querying mechanism: URL vs Javascript variables
+            sortField: null,
+            sortDirection: null,
+            localPageSize: this.pageSize,
+            tableHeader: [],
+            selected: [],
+            actionScope: "all",
+            selectedGroupAction: "",
+            performingGroupAction: false,
+            storageKey: this.storagePfx
+        }
+    },
+
+    mounted() {
+        //console.log(JSON.stringify(this.query));
+        let lsth = window.localStorage.getItem(this.storageKey);
+        if (lsth!==null) {
+            this.tableHeader = JSON.parse(lsth);
+        } else {
+            this.tableHeader = this.fields.filter(f => f.default).map(f => f.key);
         }
     },
 
     watch: {
-        search(newVal, old) {
-            let newQuery = Object.assign({}, this.vQuery, {q: newVal});
-            delete newQuery.pg;
-            if (newVal==="") {
-                delete newQuery.q;
+        tableHeader(newVal) {
+            if (newVal) {
+                localStorage.setItem(this.storageKey, JSON.stringify(newVal));
+            }
+        },
+        selected(newVal, prev) {
+            if (newVal.length) {
+                this.actionScope = "page";
+            } else {
+                this.actionScope = "all";
             }
 
-            this.replaceVQuery(newQuery);
+            if(newVal.length!=this.rows.length) {
+                this.$refs.selectall.checked=false;
+            }
         },
+        data() {
+            this.selected = [];
+        }
     },
 
     computed: {
-        isEmpty() {
-            return !(this.objects && this.objects.data && this.objects.data.length>0);
+        rows() {
+            return this.data && this.data.data && this.data.data.length>0 ? this.data.data : null;
         },
 
-        computedSearchPlaceholder() {
-            if (!this.searchPlaceholder) return "Search records";
-
-            if (this.searchPlaceholder instanceof Function) {
-                return this.searchPlaceholder();
-            }
-
-            return this.searchPlaceholder;
+        pageSize() {
+            return this.query.ps ? parseInt(this.query.ps) : undefined;
         },
 
-        columnTotalsPresent() {
-            for (let f in this.fields) {
-                if (this.fields[f].total) return true;
-            }
-            return false;
+        customizableFields() {
+            return this.fields.filter((f) => f.key);
         },
+
+        computedTableHeader() {
+            return  this.fields.filter(f => this.tableHeader.indexOf(f.key)!==-1).concat(this.fields.filter(f => !f.key));
+        },
+
+        groupActionsDisabled() {
+            return this.selected.length===0;
+        },
+        groupActionBtnDisabled() {
+            return !this.selectedGroupAction || this.performingGroupAction;
+        },
+        computedActions() {
+            return Object.fromEntries(Object.keys(this.actions).filter(k => this.actions[k]!=="-").map(k => [k, this.actions[k]]));
+        }
     },
 
     methods: {
-        replaceVQuery(val) {
-            if (this.useBrowserUrl) {
-                this.$router.push({query: val});
-            } else {
-                this.vQuery = Object.assign({}, val);
-            }
+        columnLabel(col) {
+            return columnLabel(col);
         },
 
-        async fetchData() {
-            this.errorMessage = null;
-            this.isLoading = true;
-            this.axiosController && this.axiosController.abort();
-            this.axiosController = new AbortController();
-
-            try {
-                const response = await axios.get(this.resource, {
-                    params: this.vQuery,
-                    signal: this.axiosController.signal
-                });
-                this.objects = Object.assign({}, response.data);
-                if (!this.objects.meta) {
-                    throw "Unintelligible response from API.";
-                }
-            } catch (error) {
-                if (!axios.isCancel(error)) {
-                    this.errorMessage = handleServerError(error);
-                } else {
-                    return ;
-                }
-            }
-
-            this.isLoading = false;
+        isSortedBy(key, dir) {
+            return key === this.query.sf && (!dir || dir===this.query.sd);
         },
 
         headSortClasses(col) {
@@ -327,7 +244,7 @@ export default {
                 return ;
             }
 
-            let q = Object.assign({}, this.vQuery, {sf: col.key, sd: 'asc'});
+            let q = Object.assign({}, this.query, {sf: col.key, sd: 'asc'});
 
             if (this.isSortedBy(col.key)) {
                 if (this.isSortedBy(col.key, 'asc')) {
@@ -338,218 +255,84 @@ export default {
                 }
             }
 
-            this.$emit('sortingChanged', q);
-
-            this.replaceVQuery(q);
+            this.$emit("query", q);
         },
 
-        isSortedBy(key, dir) {
-            //console.log(key, dir, curSort);
-            return key === this.vQuery.sf && (!dir || dir===this.vQuery.sd);
+        onPagination(page) {
+            let q = Object.assign({}, this.query, {pg: page});
+            this.$emit("query", q);
         },
 
-        clickedFirst() {
-            this.replaceVQuery(Object.assign({}, this.vQuery, {pg: 1}));
+        onPageSizeChange(size) {
+            let q = Object.assign({}, this.query, {ps: size});
+            delete q.pg;
+            this.$emit("query", q);
         },
 
-        clickedPrevious() {
-            this.replaceVQuery(Object.assign({}, this.vQuery, {pg: this.vQuery.pg-1}));
+        onActionTriggered(action, data) {
+            //console.log(action, toRaw(data));
+            this.$emit("actionTriggered", action, data);
         },
 
-        clickedNext() {
-            let q = Object.assign({}, this.vQuery)
-            if (!q.pg || isNaN(q.pg)) {
-                q.pg = 1;
+        async doGroupAction() {
+            let obj;
+            if (this.actionScope==="page") {
+                obj = {'type': 'list', 'data': this.selected.slice()};
+            } else {
+                obj = {type: 'filter', data: Object.assign({}, this.query.f)}
             }
-            q.pg++;
-
-            this.replaceVQuery(q);
-        },
-
-        clickedLast() {
-            this.replaceVQuery(Object.assign({}, this.vQuery, {pg: this.objects.meta.last_page}));
-        },
-
-        total(f) {
-            if (this.objects.data.length<1) {
-                return "";
-            }
-
-            return Math.round(this.objects.data.reduce(
-                (carry, item) => { return carry + parseFloat(item[f.key]) },
-                0
-            ) * 100)/100;
-        },
-
-        // closes all editable rows
-        closeAll() {
-            //
-            this.objects.data.forEach( (el, idx) => {
-                if (el.editMode) el.editMode = false;
-            })
-        },
-
-        async addRow() {
-            // if there are non-persisted rows, instruct user to deal with them
-            if (this.objects.data.filter(el => !el.id).length) {
-                return alert("Please finish editing the unsaved record first.");
-            }
-
-            this.closeAll();
 
             try {
-                if (this.dedicatedEditPage) {
-                    this.onRowCreated(await this.resourceStore.create({
-                        "name": "New Model",
-                        "categoryId": 0,
-                        "customCategory": ":)",
-                    }));
-                } else {
-                    this.objects.data.splice(0,0, {
-                        id: null,
-                        editMode: true,
-                    });
-                }
+                this.performingGroupAction = true;
+                this.$emit("actionTriggered", this.selectedGroupAction, obj);
+                this.selectedGroupAction = "";
             } catch (err) {
-                this.errorMessage = handleServerError(err);
-            }
-        },
-
-        columnLabel(col) {
-            return col.label ? col.label : col.key.charAt(0).toUpperCase() + col.key.slice(1);
-        },
-
-        toggleEditRow(idx) {
-            if (!this.objects.data[idx].editMode) {
-                // when opening, to prevent mistakes, let's "modalize" the editing a bit
-                // if there are non-persisted rows, instruct user to deal with them
-                if (this.objects.data.filter(el => !el.id).length) {
-                    return alert("Please finish editing the unsaved record first.");
-                }
-                this.closeAll();
+                this.$emit("error", err);
             }
 
-            // then turn on edit mode
-            this.objects.data[idx].editMode = !this.objects.data[idx].editMode;
+            this.performingGroupAction = false;
         },
 
-        onRowCreated(obj) {
-            if (this.dedicatedEditPage) {
-                this.$router.push({name: "models.show.main", params: {id: obj.id}});
+        selectAll() {
+            this.selected = this.rows.map(el => el.id);
+        },
+
+        unselectAll() {
+            this.selected = [];
+        },
+
+        toggleSelectAll(evt) {
+            if(evt.target.checked) {
+                this.selectAll();
             } else {
-                this.fetchData();
+                this.unselectAll();
             }
         },
 
-        onRowUpdated(obj) {
-            const idx = this.objects.data.findIndex(e => e.id==obj.id);
-            this.objects.data.splice(idx, 1, Object.assign({}, obj));
-            this.fetchData();
-        },
-
-        onRowDeleted() {
-            this.fetchData();
-        },
-
-        onRowReset(idx) {
-            this.toggleEditRow(idx);
-            if (!this.objects.data[idx].id) {
-                this.objects.data.splice(idx, 1);
+        formatCellValue(value, type) {
+            switch (type) {
+                case "boolean":
+                    return value ? "Yes" : "No";
+                default: return value;
             }
-        },
-
-        onHeaderFilterChange(v) {
-            this.replaceVQuery(v);
         }
     }
-}
+})
 </script>
 
-
 <style scoped>
-table {
-    table-layout: auto;
-}
-th {
-    white-space: nowrap;
-    vertical-align: middle;
-}
 th.sortable {
     cursor: pointer;
-}
-td{
-    vertical-align: middle;
-}
-td.break-word {
-    word-break: break-all;
-}
-td.preview {
-    background-size: contain;
-    /*background-position: center right;*/
-    background-position: center center;
-    background-repeat: no-repeat;
-    min-width: 2rem;
-}
-td.preview > * {
-    background-color: rgba(255, 255, 255, 0.65);
-    padding: 0 0.3rem;
-    border-radius: 3px;
-}
-td.preview img {
-    max-height: 1rem;
-}
-tr:hover td.preview {
-    opacity: 1;
-}
-.page-number {
-    margin: 0 1rem;
-}
-.paginator-stats {
-    text-align: right;
 }
 .blurred {
     opacity: 0.5;
     pointer-events: none;
 }
-.loader-container {
-    position: relative;
-}
-.loader {
-    position: absolute;
-    left: 50%;
-    top: 10rem;
-    transform: translate(-50%, 0);
-    z-index: 100;
-    display: inline-block;
-}
 tfoot td {
-    font-style: italic;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
 }
-
-/*loader icon*/
-.lds-dual-ring {
-    display: inline-block;
-    width: 80px;
-    height: 80px;
+tfoot .form-select {
+    max-width: 15rem;
 }
-.lds-dual-ring:after {
-    content: " ";
-    display: block;
-    width: 64px;
-    height: 64px;
-    margin: 8px;
-    border-radius: 50%;
-    border: 6px solid #6dc084;
-    border-color: #6dc084 transparent #6dc084 transparent;
-    animation: lds-dual-ring 1.2s linear infinite;
-}
-@keyframes lds-dual-ring {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
 </style>
