@@ -52,17 +52,18 @@
         />
 
         <c-table v-if="vQuery && rows?.meta?.total>0"
-                        :fields="computedFields"
-                        :data="rows"
-                        :query="vQuery"
-                        :sorting-classes="{default: 'entypo entypo-chevron-up text-muted', sortedAsc: 'entypo entypo-chevron-up text-primary', sortedDesc: 'entypo entypo-chevron-down text-primary'}"
-                        :is-loading="isLoading"
-                        :bulk-actions-enabled="bulkActionsEnabled"
-                        :actions="actions"
-                        :storage-pfx="storagePfx + 'table'"
+                 :fields="computedFields"
+                 :data="rows"
+                 :query="vQuery"
+                 :sorting-classes="{default: 'entypo entypo-chevron-up text-muted', sortedAsc: 'entypo entypo-chevron-up text-primary', sortedDesc: 'entypo entypo-chevron-down text-primary'}"
+                 :is-loading="isLoading"
+                 :actions-enabled="actionsEnabled"
+                 :bulk-actions-enabled="bulkActionsEnabled"
+                 :actions="actions"
+                 :storage-pfx="storagePfx + 'table'"
 
-                        @query="onTableQuery"
-                        @actionTriggered="onActionTriggered"
+                 @query="onTableQuery"
+                 @actionTriggered="onActionTriggered"
         />
         <p v-if="rows?.meta?.total===0" class="alert alert-warning">There are no results for your filter.</p>
     </div>
@@ -112,7 +113,7 @@ export default {
         },
         actions: {
             type: Object,
-            default: {}
+            default: null
         }
     },
 
@@ -134,7 +135,7 @@ export default {
         }
 
         this.filterEditorState = Object.assign({}, this.vQuery.f);
-        this.$watch(() => this.filterEditorState, function(newVal) {
+        this.$watch(() => this.filterEditorState, function (newVal) {
             let newQuery = Object.assign({}, this.vQuery, {f: newVal});
             delete newQuery.pg;
             //console.log("Updated vQuery from smart-filter: ", newVal);
@@ -184,9 +185,9 @@ export default {
          */
         queryableFields() {
             let fields = {};
-            for (let i=0; i<this.fields.length; i++) {
+            for (let i = 0; i < this.fields.length; i++) {
                 if (!this.fields[i].filter) {
-                    continue ;
+                    continue;
                 }
                 fields[this.fields[i].key] = Object.assign(
                     {label: columnLabel(this.fields[i]), type: this.fields[i].type},
@@ -249,19 +250,19 @@ export default {
 
         onActionSuccess(action) {
             //console.info("Action successfully peformed: ", action);
-            this.actionDialog=null;
+            this.actionDialog = null;
             this.fetchRows();
         },
 
         onActionFailure(action) {
             //console.log("Action failed: ", action);
-            this.actionDialog=null;
+            this.actionDialog = null;
             this.error = action.error;
             this.$nextTick(() => this.$refs.error.scrollIntoView())
         },
 
         onActionCancellation(action) {
-            this.actionDialog=null;
+            this.actionDialog = null;
         },
 
         updateVQuery(newQuery) {
@@ -285,7 +286,7 @@ export default {
 
         deleteCurrentFilter() {
             const idx = this.savedFilters.findIndex((f) => f === this.selectedSavedFilter);
-            if (idx===-1) {
+            if (idx === -1) {
                 return alert("Ooops, could not find this filter. There must have been a mistake. Please refresh this page and try again.");
             }
             this.selectedSavedFilter = null;
@@ -298,7 +299,7 @@ export default {
          */
         initSavedFilters() {
             let lsf = window.localStorage.getItem(this.getSavedFiltersStorKey());
-            if (lsf!==null) {
+            if (lsf !== null) {
                 this.savedFilters = JSON.parse(lsf);
             } else {
                 this.savedFilters = this.defaultFilters.slice();
@@ -336,12 +337,12 @@ export default {
         },
 
         savedFilterActive(flt) {
-            return this.selectedSavedFilter!==null && JSON.stringify(flt) === JSON.stringify(this.selectedSavedFilter.params);
+            return this.selectedSavedFilter !== null && JSON.stringify(flt) === JSON.stringify(this.selectedSavedFilter.params);
         },
 
         resetDefaultFilters() {
             if (!confirm("This operation will delete any custom filters you might have created. Please confirm.")) {
-                return ;
+                return;
             }
             this.savedFilters = DEFAULT_SAVED_FILTERS.slice();
             window.localStorage.removeItem(this.getSavedFiltersStorKey());
@@ -360,6 +361,7 @@ export default {
     --bs-accordion-btn-active-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round'><path d='M2 5L8 11L14 5'/></svg>");
     --bs-accordion-active-bg: var(--theme-lighter-green);
 }
+
 .tab-content {
     padding: 0.75rem;
     background-color: white;

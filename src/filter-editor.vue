@@ -30,9 +30,10 @@
                                 <input type="text" v-if="queryRow.filter==null" disabled class="form-control" />
 
                                 <input v-if="queryRow.filter && (queryRow.filter.type=='text' || queryRow.filter.type=='number')"
-                                            v-model="l_query[qIdx].value"
-                                            :type="queryRow.filter.type"
-                                            @change="submit"
+                                       v-model="l_query[qIdx].value"
+                                       class="form-control"
+                                       :type="queryRow.filter.type"
+                                       @change="submit"
                                 />
 
                                 <select v-if="queryRow.filter && queryRow.filter.type=='selector'"
