@@ -44,7 +44,7 @@
                     <template v-if="!f.component">{{ formatCellValue(o[f.key], f.type) }}</template>
                 </td>
 
-                <td>
+                <td v-if="actionsEnabled">
                     <actions-cell v-if="actions" :o="o" :actions="actions" @triggered="onActionTriggered"></actions-cell>
                 </td>
             </tr>
@@ -109,6 +109,10 @@ export default defineComponent({
         fields: {
             type: Array,
             required: true,
+        },
+        actionsEnabled: {
+            type: Boolean,
+            default: true,
         },
         bulkActionsEnabled: {
             type: Boolean,
