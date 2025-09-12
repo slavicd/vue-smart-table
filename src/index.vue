@@ -193,7 +193,6 @@ export default {
                     this.fields[i].filter
                 );
             }
-            console.log(fields);
             return fields;
         },
     },
