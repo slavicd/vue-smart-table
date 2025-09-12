@@ -99,7 +99,7 @@ export default {
     name: "smart-form",
 
     components: {
-        "c-combobox": Combobox,
+        //"c-combobox": Combobox,
     },
 
     props: {
