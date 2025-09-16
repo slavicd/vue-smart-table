@@ -41,9 +41,9 @@
                                         v-model="l_query[qIdx].value"
                                         @change="submit"
                                 >
-                                    <option v-for="(option, optionKey) in queryRow.filter.options"
-                                            :value="option.value ? option.value : optionKey"
-                                    >{{ option.label ? option.label : option }}</option>
+                                    <option v-for="(option) in normalizedOptions(queryRow)"
+                                            :value="option.value"
+                                    >{{ option.label }}</option>
                                 </select>
 
                                 <template v-if="queryRow.filter && queryRow.filter.type==='dateTimeRange'">
@@ -168,7 +168,7 @@ export default {
 
         deleteIsAvailable() {
             return this.selectedFilter !== null && !this.selectedFilter.readonly;
-        }
+        },
     },
 
     methods: {
@@ -223,6 +223,24 @@ export default {
             }
 
             return exp;
+        },
+
+        /**
+         * Options can come as dictionaries or as arrays
+         */
+        normalizedOptions(row) {
+            let normalized = [];
+            if (Array.isArray(row.filter.options)) {
+                normalized = row.filter.options.map(
+                    (o) => ({ "value": o instanceof Object ? o.value : o, "label": o instanceof Object ? o.label : o})
+                );
+            } else {
+                normalized = Object.entries(row.filter.options).map(
+                    o => ({value: o[0], label: o[1]})
+                );
+            }
+
+            return normalized;
         },
 
         addCondition() {
