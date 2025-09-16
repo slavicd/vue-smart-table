@@ -19,7 +19,7 @@
                                             :class="{btn: true, 'btn-secondary': fkey==queryRow[0], 'btn-outline-secondary': fkey!==queryRow[0]}"
                                             @click="switchField(qIdx, fkey)">{{ f.label }}</button>
 
-                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">select</button>
+                                    <button v-if="hasSecondaryFields" class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">select</button>
                                     <ul class="dropdown-menu">
                                         <li v-for="(f, fkey) in secondaryFields"><a class="dropdown-item" href="#" @click.prevent="switchField(qIdx, fkey)">{{ f.label }}</a></li>
                                     </ul>
@@ -105,7 +105,7 @@ export default {
 
     props: {
         id: {},
-        fields: { type: Object, required: true },
+        fields: {type: Object, required: true},
         modelValue: {},
         open: {
             type: Boolean,
@@ -142,38 +142,41 @@ export default {
 
     computed: {
         mainFields() {
-            return Object.fromEntries( Object.entries(this.fields).slice(0, 4) );
+            return Object.fromEntries(Object.entries(this.fields).slice(0, 4));
         },
         secondaryFields() {
-            return Object.fromEntries( Object.entries(this.fields).slice(4) );
+            return Object.fromEntries(Object.entries(this.fields).slice(4));
+        },
+        hasSecondaryFields() {
+            return Object.keys(this.fields).length > 4;
         },
 
         filterDescription() {
-            if (this.l_query.length===0) {
+            if (this.l_query.length === 0) {
                 return "";
             }
             let exp = this.exportQuery(this.l_query);
-            if (Object.keys(exp).length===0) {
+            if (Object.keys(exp).length === 0) {
                 return "";
             }
             return JSON.stringify(exp);
         },
 
         canCreate() {
-            return this.selectedFilter===null;
+            return this.selectedFilter === null;
         },
 
         deleteIsAvailable() {
-            return this.selectedFilter!==null && !this.selectedFilter.readonly;
+            return this.selectedFilter !== null && !this.selectedFilter.readonly;
         }
     },
 
     methods: {
         importQuery(newVal) {
             const tempQuery = newVal ? Object.entries(newVal) : [];
-            let query=[];
+            let query = [];
 
-            for (let i=0; i<tempQuery.length; i++) {
+            for (let i = 0; i < tempQuery.length; i++) {
                 if (this.fields[tempQuery[i][0]].type === "dateTimeRange") {
                     tempQuery[i][1] = tempQuery[i][1].split(";");
                 }
@@ -185,7 +188,7 @@ export default {
                 })
             }
 
-            if (query.length===0) {
+            if (query.length === 0) {
                 query.push(Object.assign({}, EMPTY_CONDITION));
             }
             return query;
@@ -197,20 +200,21 @@ export default {
                     return ["", ""];
                 case "boolean":
                     return "1";
-                default: return null;
+                default:
+                    return null;
             }
         },
 
         exportQuery() {
             let exp = {};
-            for (let i=0; i<this.l_query.length; i++) {
-                if (this.l_query[i].key===null) {
+            for (let i = 0; i < this.l_query.length; i++) {
+                if (this.l_query[i].key === null) {
                     continue;
                 }
 
                 let value = this.l_query[i].value;
 
-                if(value!==null && typeof value === "object" && value.length>1) {
+                if (value !== null && typeof value === "object" && value.length > 1) {
                     // array value, let's pack it
                     value = value.join(";");
                 }
@@ -236,13 +240,13 @@ export default {
             this.l_query[rowKey].value = value;
             this.l_query[rowKey].filter = this.fields[fieldKey];
 
-            if (value!==null) {
+            if (value !== null) {
                 this.submit();
             }
 
             // focus input if managed internally
             const refs = this.$refs['input' + rowKey];
-            if (!refs) return ;
+            if (!refs) return;
             const input = refs[0];
             this.$nextTick(() => {
                 input.focus();
@@ -273,12 +277,15 @@ export default {
     display: flex;
     gap: 1rem;
 }
+
 .sf-rule .input-group-text {
     flex-basis: 8rem;
 }
+
 .sf-rule .input-group-text.full {
     flex-basis: 100%;
 }
+
 .accordion-button {
     padding-top: 0.75rem;
     padding-bottom: 0.75rem;
