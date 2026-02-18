@@ -3,14 +3,17 @@
 A VueJS component to manage REST resources in a table. Uses Bootstrap 5 markup.
 
 
-## Basic Usage
+## Usage Example
 
 ```vuejs
 <template>
     <smart-table :fields="fields"
-          :actions="actions"
-          api="/api/books"
-    ></smart-table>
+                  :actions="actions"
+                  api="/api/programs"
+                  storage-pfx="programs_v1"
+                  v-model:selectedFields="table_header"
+                  v-model:query="local_query"
+    ></manage-table>
 </template>
 <script>
 import SmartTable from "@entropi/vue-smart-table";
@@ -18,10 +21,36 @@ import SmartTable from "@entropi/vue-smart-table";
 export default {
     data() {
         return {
-            'fields': [
+            local_query: null,
+            table_header: [],
+        
+            fields: [
                 {key: "id", sortable: true},
-                {key: "title"}
-            ]
+                {key: "title", filter: {type: "number", allowOr: true}}
+            ],
+            
+            actions: [
+                {
+                    conditional: (r) => r.revisions_url,
+                    link: (r) => r.revisions_url,
+                    iconClass: "entypo entypo-text-doc",
+                    label: "revisions",
+                    bulk: false,
+                },
+                "-",
+                {
+                    conditional: (r) => r.is_activatable,
+                    handler: (actionTarget) => store.changeStatus(STATUS_ACTIVE, actionTarget),
+                    label: "activate",
+                },
+                "-",
+                {
+                    component: deleteAction,
+                    label: "delete",
+                    class: "text-danger",
+                    iconClass: "entypo entypo-trash"
+                },
+            ],
         }
     }
 }
@@ -32,6 +61,3 @@ Until the documentation is improved, check [index.vue](src/index.vue) for the ac
 
 
 ## Issues
-
-* auto-removing empty values on combobox is buggy (focuses-back in)
-* saved filter won't unload when changing values sometimes (saved filter 2)
