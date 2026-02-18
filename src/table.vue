@@ -10,7 +10,7 @@
                     {{ columnLabel(col) }}
                     <i v-if="col.sortable" :class="headSortClasses(col)"></i>
                 </th>
-                <th>
+                <th class="settings">
                     <div class="dropdown">
                         <button class="btn btn-sm" data-bs-toggle="dropdown" aria-expanded="false" type="button">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
@@ -50,7 +50,7 @@
             </tr>
             </tbody>
 
-            <tfoot v-if="bulkActionsEnabled">
+            <tfoot v-if="bulkActionsEnabled && data?.meta?.total>0">
             <tr>
                 <td :colspan="computedTableHeader.length+2">
                     <div class="input-group">
@@ -60,7 +60,7 @@
                         </select>
                         <select class="form-select" v-model="selectedGroupAction">
                             <option value="">select action</option>
-                            <option v-for="(action, actionKey) in computedActions" :value="actionKey">{{ action.label ? action.label : action.key }}</option>
+                            <option v-for="(action) in bulkActions" :value="action">{{ action.label }}</option>
                         </select>
                         <button class="btn btn-primary" :disabled="groupActionBtnDisabled" type="button" @click="doGroupAction">Perform</button>
                     </div>
@@ -81,7 +81,7 @@
 
 <script>
 
-import {defineComponent} from 'vue';
+import {defineComponent, toRaw} from 'vue';
 import pagination from "./pagination.vue";
 import {columnLabel} from "./helpers";
 import ActionsCell from "./actions-cell.vue";
@@ -92,6 +92,7 @@ export default defineComponent({
     emits: [
         "query",
         "actionTriggered",
+        "update:selected-fields",
     ],
     components: {
         "c-pagination": pagination,
@@ -109,6 +110,9 @@ export default defineComponent({
         fields: {
             type: Array,
             required: true,
+        },
+        selectedFields: {
+            type: Array
         },
         bulkActionsEnabled: {
             type: Boolean,
@@ -159,6 +163,8 @@ export default defineComponent({
             if (newVal) {
                 localStorage.setItem(this.storageKey, JSON.stringify(newVal));
             }
+            this.$emit("update:selected-fields", toRaw(newVal));
+
         },
         selected(newVal, prev) {
             if (newVal.length) {
@@ -167,7 +173,7 @@ export default defineComponent({
                 this.actionScope = "all";
             }
 
-            if(newVal.length!=this.rows.length) {
+            if(!this.rows || newVal.length!=this.rows.length) {
                 this.$refs.selectall.checked=false;
             }
         },
@@ -199,11 +205,13 @@ export default defineComponent({
         groupActionsDisabled() {
             return this.selected.length===0;
         },
+
         groupActionBtnDisabled() {
             return !this.selectedGroupAction || this.performingGroupAction;
         },
-        computedActions() {
-            return Object.fromEntries(Object.keys(this.actions).filter(k => this.actions[k]!=="-").map(k => [k, this.actions[k]]));
+
+        bulkActions() {
+            return this.actions.filter(a => typeof(a) === "object" && a.bulk!==false);
         }
     },
 
@@ -280,7 +288,7 @@ export default defineComponent({
         async doGroupAction() {
             let obj;
             if (this.actionScope==="page") {
-                obj = {'type': 'list', 'data': this.selected.slice()};
+                obj = {type: 'list', data: this.selected.slice()};
             } else {
                 obj = {type: 'filter', data: Object.assign({}, this.query.f)}
             }
@@ -326,6 +334,9 @@ export default defineComponent({
 <style scoped>
 th.sortable {
     cursor: pointer;
+}
+th.settings {
+    text-align: end;
 }
 .blurred {
     opacity: 0.5;

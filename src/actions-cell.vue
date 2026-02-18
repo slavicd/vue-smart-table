@@ -7,8 +7,12 @@
         </button>
 
         <ul class="dropdown-menu">
-            <li v-for="(action, actionKey) in actions" class="">
-                <a v-if="shouldShow(action)" :class="linkClasses(action.class)" href="#" @click.prevent="emit(actionKey)"><i :class="action.iconClass"></i> {{label(actionKey)}}</a>
+            <li v-for="action in actions" class="">
+                <a v-if="shouldDisplayActionTag(action)"
+                   :class="linkClasses(action.class)"
+                   :href="action.link ? action.link.call(null, o) : '#'" @click="doAction(action, $event)"><i v-if="action.iconClass" :class="action.iconClass"></i> {{ action.label }}
+                </a>
+
                 <hr v-if="action==='-'" class="dropdown-divider" />
             </li>
         </ul>
@@ -25,14 +29,15 @@ export default {
     emits: ["triggered"],
 
     methods: {
-        emit(action) {
-            //console.log(this.actions[action].handlers);
-            //this.actions[action].handlers.init(action, {type: "single", data: this.o});
-            this.$emit("triggered", action, {type: "single", data: toRaw(this.o)});
-        },
+        doAction(action, $event) {
+            if (action.link) {
+                return ;
+            }
 
-        label(action) {
-            return this.actions[action].label ?? action;
+            $event.preventDefault();
+
+            // complicated case: spawn component
+            this.$emit("triggered", action, {type: "single", data: toRaw(this.o)});
         },
 
         linkClasses(actionClass) {
@@ -43,7 +48,7 @@ export default {
             return classes;
         },
 
-        shouldShow(action) {
+        shouldDisplayActionTag(action) {
             return action!=="-" && (!action.conditional || action.conditional.call(null, this.o))
         }
     },

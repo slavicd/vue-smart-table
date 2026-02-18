@@ -23,7 +23,7 @@
         </div>
 
         <div class="paginator-stats">
-            Showing
+            Showing at most
             <select v-model="localPageSize" @change="onPageSizeChange" class="" autocomplete="off">
                 <option>15</option>
                 <option>50</option>

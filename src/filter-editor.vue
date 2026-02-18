@@ -5,87 +5,54 @@
                 <button :class="{'accordion-button': true, collapsed: !open}" type="button"
                         data-bs-toggle="collapse" :data-bs-target="'#' + id" aria-expanded="true" aria-controls="id"
                 >
-                    <!--perhaps describe the filters here-->
                     <small v-if="!open">click to see filter details</small>
                 </button>
             </h2>
+
             <div :class="{'accordion-collapse': true, 'collapse': true, 'show': open}" :id="id" ref="collapsible">
                 <div class="accordion-body">
-                    <form @submit.prevent="submit">
-                        <div class="sf-rule mb-2" v-for="(queryRow, qIdx) in l_query">
-                            <div class="input-group">
-                                <template v-if="queryRow.key===null">
-                                    <button v-for="(f, fkey) in mainFields" type="button"
-                                            :class="{btn: true, 'btn-secondary': fkey==queryRow[0], 'btn-outline-secondary': fkey!==queryRow[0]}"
-                                            @click="switchField(qIdx, fkey)">{{ f.label }}</button>
+                    <div v-if="!error" class="content">
+                        <form @submit.prevent="submit" class="filter-row-container">
+                            <div class="filter-row" v-for="(queryRow, qIdx) in l_query" :key="queryRowKey(qIdx, queryRow)">
+<!--                                <code>{{ queryRowKey(qIdx, queryRow) }}</code>-->
+                                <query-row :fields="fields" :fields-available="availableFields" v-model="l_query[qIdx]" />
 
-                                    <button v-if="hasSecondaryFields" class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">select</button>
-                                    <ul class="dropdown-menu">
-                                        <li v-for="(f, fkey) in secondaryFields"><a class="dropdown-item" href="#" @click.prevent="switchField(qIdx, fkey)">{{ f.label }}</a></li>
-                                    </ul>
-                                </template>
+                                <button type="button" class="btn btn-sm btn-outline-danger" @click="removeCondition(qIdx)" :disabled="!conditionIsRemovable(qIdx)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-dash" viewBox="0 0 16 16">
+                                        <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </form>
 
-                                <span v-if="queryRow.key!==null" :class="{'input-group-text': true}">{{ queryRow.filter.label }}</span>
-
-                                <input type="text" v-if="queryRow.filter==null" disabled class="form-control" />
-
-                                <input v-if="queryRow.filter && (queryRow.filter.type=='text' || queryRow.filter.type=='number')"
-                                       v-model="l_query[qIdx].value"
-                                       class="form-control"
-                                       :type="queryRow.filter.type"
-                                       @change="submit"
-                                />
-
-                                <select v-if="queryRow.filter && queryRow.filter.type=='selector'"
-                                        class="form-select"
-                                        v-model="l_query[qIdx].value"
-                                        @change="submit"
-                                >
-                                    <option v-for="(option) in normalizedOptions(queryRow)"
-                                            :value="option.value"
-                                    >{{ option.label }}</option>
-                                </select>
-
-                                <template v-if="queryRow.filter && queryRow.filter.type==='dateTimeRange'">
-                                    <input class="form-control" type="date" v-model="l_query[qIdx].value[0]" @change="submit" />
-                                    <input class="form-control" type="date" v-model="l_query[qIdx].value[1]" @change="submit" />
-                                </template>
-
-                                <template v-if="queryRow.filter && queryRow.filter.type==='boolean'">
-                                    <input v-model="l_query[qIdx].value" @change="submit"
-                                           type="radio" class="btn-check" value="1" :name="'n' + qIdx" :id="id + 'qry' + qIdx" autocomplete="off" >
-                                    <label class="btn btn-outline-success" :for="id + 'qry' + qIdx">yes</label>
-
-                                    <input v-model="l_query[qIdx].value" @change="submit"
-                                           type="radio" class="btn-check" value="0" :name="'n' + qIdx" :id="id + 'qrn' + qIdx" autocomplete="off">
-                                    <label class="btn btn-outline-success" :for="id + 'qrn' + qIdx">no</label>
-                                </template>
+                        <div class="dashboard">
+                            <div class="">
+                                <button type="button" class="btn btn-outline-secondary" @click="addCondition" :disabled="availableFields.length<1" title="add condition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
+                                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+                                    </svg>
+                                </button>
                             </div>
 
-                            <button type="button" class="btn btn-sm btn-outline-danger" @click="removeCondition(qIdx)">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-dash" viewBox="0 0 16 16">
-                                    <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </form>
-
-                    <div class="row mt-3">
-                        <div class="col-md-6 col-xl-8">
-                            <button type="button" class="btn btn-outline-secondary" @click="addCondition" title="add condition">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
-                                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="col-md-6 col-xl-4 text-end">
-                            <div v-if="canCreate" class="input-group input-group">
-                                <input type="text" v-model="newFilterName" maxlength="20" class="form-control" />
-                                <button type="button" :disabled="!newFilterName" @click="createFilter" class="btn btn-outline-secondary">Save Filter</button>
+                            <div class="">
+                                <div  v-if="canCreateFilter" class="input-group input-group">
+                                    <button @click="is_saving_filter=!is_saving_filter" class="btn btn-outline-secondary" type="button" :title="is_saving_filter ? '' : 'Save Filter'">
+                                        <svg v-if="!is_saving_filter" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bookmark" viewBox="0 0 16 16">
+                                            <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1z"/>
+                                        </svg>
+                                        <svg v-if="is_saving_filter" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16">
+                                            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/>
+                                        </svg>
+                                    </button>
+                                    <input v-if="is_saving_filter" type="text" v-model="new_filter_name" maxlength="20" class="form-control" placeholder="My favorite Content" />
+                                    <button v-if="is_saving_filter" type="button" :disabled="!new_filter_name" @click="createFilter" class="btn btn-outline-secondary">Save Filter</button>
+                                </div>
+                                <button v-if="!canCreateFilter" :disabled="!filterIsRemovable" class="btn btn-outline-danger" @click="deleteFilter">Delete Saved Filter</button>
                             </div>
-                            <button v-if="!canCreate" :disabled="!deleteIsAvailable" class="btn btn-outline-danger" @click="deleteFilter">Delete Saved Filter</button>
                         </div>
                     </div>
+
+                    <p class="alert alert-danger" v-if="error">{{error}}</p>
                 </div>
             </div>
         </div>
@@ -93,19 +60,24 @@
 </template>
 
 <script>
-const EMPTY_CONDITION = {key: null, value: null, filter: null};
-//import Combobox from "@app/components/combobox";
+
+
+import QueryRow from "./query-row.vue";
+import {toRaw} from "vue";
+import {cloneDeep} from "lodash";
 
 export default {
     name: "smart-form",
 
+    emits: ["update:modelValue", "toggled", "createFilter", "deleteFilter"],
+
     components: {
-        //"c-combobox": Combobox,
+        QueryRow,
     },
 
     props: {
         id: {},
-        fields: {type: Object, required: true},
+        fields: {type: Array, required: true},
         modelValue: {},
         open: {
             type: Boolean,
@@ -116,196 +88,216 @@ export default {
         }
     },
 
+    data() {
+        return {
+            l_query: null,
+            disable_submit: false,   // this is used to prevent circular updates when l_query change emits a change up, which, in turn trickles back into l_query
+            new_filter_name: null,
+            is_saving_filter: false,
+            error: null,
+        }
+    },
+
     watch: {
-        modelValue(newVal) {
-            this.l_query = this.importQuery(newVal);
+        modelValue(newVal, oldVal) {
+            const newValRaw = toRaw(newVal);
+            const oldValRaw = toRaw(oldVal);
+            if (JSON.stringify(newValRaw)===JSON.stringify(oldValRaw)) {
+                return ;
+            }
+
+            //console.debug("modelValue changed: ", toRaw(newVal));
+
+            try {
+                this.disable_submit = true;
+                this.l_query = this.importQuery(newVal);
+                this.disable_submit = false;
+                this.error = null;
+            } catch (err) {
+                this.error = err;
+            }
         }
     },
 
     mounted() {
-        //console.log(this.$refs.collapsible);
+        //console.log("FilterEditor mounted.");
         this.$refs.collapsible.addEventListener('hidden.bs.collapse', event => {
             this.$emit("toggled", false);
         });
         this.$refs.collapsible.addEventListener('shown.bs.collapse', event => {
             this.$emit("toggled", true);
         });
-        this.l_query = this.importQuery(this.modelValue);
-    },
-
-    data() {
-        return {
-            l_query: [],
-            newFilterName: null,
+        try {
+            this.l_query = this.importQuery(this.modelValue);
+        } catch (err) {
+            this.error = err;
         }
+
+        this.$watch(() => this.l_query, function (newVal, oldVal) {
+            //console.debug("l_query changed:", toRaw(newVal), toRaw(oldVal));
+
+            if (!this.disable_submit) {
+                this.submit();
+            }
+        }, {deep: true});
     },
 
     computed: {
-        mainFields() {
-            return Object.fromEntries(Object.entries(this.fields).slice(0, 4));
-        },
-        secondaryFields() {
-            return Object.fromEntries(Object.entries(this.fields).slice(4));
-        },
-        hasSecondaryFields() {
-            return Object.keys(this.fields).length > 4;
-        },
-
-        filterDescription() {
-            if (this.l_query.length === 0) {
-                return "";
-            }
-            let exp = this.exportQuery(this.l_query);
-            if (Object.keys(exp).length === 0) {
-                return "";
-            }
-            return JSON.stringify(exp);
-        },
-
-        canCreate() {
+        canCreateFilter() {
             return this.selectedFilter === null;
         },
 
-        deleteIsAvailable() {
+        filterIsRemovable() {
             return this.selectedFilter !== null && !this.selectedFilter.readonly;
         },
+
+        /**
+         * Returns fields not currently used in the query
+         */
+        availableFields() {
+            if (this.l_query===null) {
+                return this.fields.slice();
+            }
+            return this.fields.filter((f) => !this.l_query.find(qr => qr.field===f.key));
+        }
     },
 
     methods: {
         importQuery(newVal) {
-            const tempQuery = newVal ? Object.entries(newVal) : [];
+            // if (Array.isArray(newVal)) {
+            //     // in array format ([ {field: <field>, value: <value>}, ...]
+            //     return newVal.slice();
+            // }
+
+            const queryEntries = newVal ? Object.entries(newVal) : [];
             let query = [];
 
-            for (let i = 0; i < tempQuery.length; i++) {
-                if (this.fields[tempQuery[i][0]].type === "dateTimeRange") {
-                    tempQuery[i][1] = tempQuery[i][1].split(";");
+            // todo: generate a field map by key?
+
+            for (let i = 0; i < queryEntries.length; i++) {
+                let requestedField = queryEntries[i][0];
+                let field = this.fields.find(f=>f.key===requestedField);
+
+                if (!field) {
+                    throw `Could not parse the query! What is field ${requestedField}?`;
+                }
+
+                if (field.type === "dateTimeRange" && typeof queryEntries[i][1] == "string") {
+                    const split = queryEntries[i][1].split(";");
+                    queryEntries[i][1] = {
+                        from: split[0],
+                        to: split[1],
+                    };
                 }
 
                 query.push({
-                    key: tempQuery[i][0],
-                    value: tempQuery[i][1],
-                    filter: this.fields[tempQuery[i][0]],
+                    field: field.key,
+                    value: cloneDeep(queryEntries[i][1]),
                 })
             }
 
             if (query.length === 0) {
-                query.push(Object.assign({}, EMPTY_CONDITION));
+                query.push({});
             }
+
+            //console.debug(query);
+
             return query;
         },
 
-        defaultFieldValue(field) {
-            switch (field) {
-                case "dateTimeRange":
-                    return ["", ""];
-                case "boolean":
-                    return "1";
-                default:
-                    return null;
-            }
-        },
-
+        /**
+         * Transforms the array into an object with fields as keys
+         */
         exportQuery() {
             let exp = {};
             for (let i = 0; i < this.l_query.length; i++) {
-                if (this.l_query[i].key === null) {
+                if (!this.l_query[i].field) {
                     continue;
                 }
-
-                let value = this.l_query[i].value;
-
-                if (value !== null && typeof value === "object" && value.length > 1) {
-                    // array value, let's pack it
-                    value = value.join(";");
+                if (this.l_query[i].value===null) {
+                    // todo: replace with a field-specific null
+                    continue;
                 }
-
-                exp[this.l_query[i].key] = value;
+                let value = cloneDeep(toRaw(this.l_query[i].value));
+                exp[this.l_query[i].field] = value;
             }
 
             return exp;
         },
 
-        /**
-         * Options can come as dictionaries or as arrays
-         */
-        normalizedOptions(row) {
-            let normalized = [];
-            if (Array.isArray(row.filter.options)) {
-                normalized = row.filter.options.map(
-                    (o) => ({ "value": o instanceof Object ? o.value : o, "label": o instanceof Object ? o.label : o})
-                );
-            } else {
-                normalized = Object.entries(row.filter.options).map(
-                    o => ({value: o[0], label: o[1]})
-                );
-            }
-
-            return normalized;
-        },
-
         addCondition() {
-            this.l_query.push(Object.assign({}, EMPTY_CONDITION));
+            this.l_query.push({});
         },
 
         removeCondition(qIdx) {
-            this.l_query.splice(qIdx, 1);
-            this.submit();
+            if (this.l_query.length===1) {
+                // if the only available row, replace with the "dummy" row instead
+                this.l_query.splice(qIdx, 1, {});
+            } else {
+                this.l_query.splice(qIdx, 1);
+            }
         },
 
-        switchField(rowKey, fieldKey) {
-            let value = this.defaultFieldValue(this.fields[fieldKey].type);
-            this.l_query[rowKey].key = fieldKey;
-            this.l_query[rowKey].value = value;
-            this.l_query[rowKey].filter = this.fields[fieldKey];
-
-            if (value !== null) {
-                this.submit();
-            }
-
-            // focus input if managed internally
-            const refs = this.$refs['input' + rowKey];
-            if (!refs) return;
-            const input = refs[0];
-            this.$nextTick(() => {
-                input.focus();
-            });
+        conditionIsRemovable(idx) {
+            return this.l_query.length>1 || idx>0 || Object.keys(this.l_query[idx]).length>0;
         },
 
         submit() {
-            this.$emit("update:modelValue", this.exportQuery(this.l_query));
+            const exp =  this.exportQuery(this.l_query);
+            //console.debug("filterEditor::update:modelValue:", exp);
+            this.$emit("update:modelValue", exp);
         },
 
         createFilter() {
             this.$emit("createFilter", {
-                label: this.newFilterName,
+                label: this.new_filter_name,
                 params: this.exportQuery(this.l_query),
             });
-            this.newFilterName = null;
+            this.new_filter_name = null;
+            this.is_saving_filter = false;
         },
 
         deleteFilter() {
             this.$emit("deleteFilter");
-        }
+        },
+
+        queryRowKey(idx, row) {
+            const rkey = row.field ? row.field : '0';
+            const rVal = row.value ? JSON.stringify(row.value).substring(0, 150) : '';
+            return `rk-${idx}-${rkey}-${rVal}`;
+        },
     }
 }
 </script>
 
 <style scoped>
-.sf-rule {
+.filter-row-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    & code {
+        flex-basis: 120px;
+        max-width: 200px;
+    }
+}
+
+.filter-row {
     display: flex;
     gap: 1rem;
-}
-
-.sf-rule .input-group-text {
-    flex-basis: 8rem;
-}
-
-.sf-rule .input-group-text.full {
-    flex-basis: 100%;
 }
 
 .accordion-button {
     padding-top: 0.75rem;
     padding-bottom: 0.75rem;
+}
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.dashboard {
+    display: flex;
+    justify-content: space-between;
 }
 </style>

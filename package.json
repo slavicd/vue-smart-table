@@ -1,11 +1,17 @@
 {
     "name": "@entropi/vue-smart-table",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "author": {
         "email": "slavic@entropi.dev",
         "name": "Slavic Dragovtev"
     },
-    "dependencies": {
+    "peerDependencies": {
+        "axios": "^1.0",
+        "bootstrap": "^5.0",
+        "lodash": "^4.17.23",
+        "vue": "^3.0"
+    },
+    "devDependencies": {
         "axios": "^1.0",
         "vue": "^3.0"
     },
