@@ -1,7 +1,7 @@
 <script setup>
 import {ref, computed, useTemplateRef, toRaw, reactive, onMounted} from "vue";
 import ComboboxInput from "./combobox-input.vue";
-import {cloneDeep, debounce} from "lodash";
+import {cloneDeep, debounce} from "lodash-es";
 
 const props = defineProps({
     'fields': {type: Array, required: true},

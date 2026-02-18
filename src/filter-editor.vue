@@ -64,7 +64,7 @@
 
 import QueryRow from "./query-row.vue";
 import {toRaw} from "vue";
-import {cloneDeep} from "lodash";
+import {cloneDeep} from "lodash-es";
 
 export default {
     name: "smart-form",

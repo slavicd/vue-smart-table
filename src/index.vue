@@ -89,7 +89,7 @@ import Table from "./table.vue";
 import {columnLabel} from "./helpers";
 import AxiosError from "./axios-error";
 import {toRaw} from "vue";
-import {cloneDeep, isEqual} from "lodash";
+import {cloneDeep, isEqual} from "lodash-es";
 
 export default {
     name: "smart-table",

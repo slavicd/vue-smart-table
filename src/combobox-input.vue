@@ -23,7 +23,7 @@
 
 <script>
 
-import {debounce} from "lodash";
+import {debounce} from "lodash-es";
 import {toRaw} from "vue";
 
 export default {
