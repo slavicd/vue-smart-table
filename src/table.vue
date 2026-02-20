@@ -44,7 +44,7 @@
                     <template v-if="!f.component">{{ formatCellValue(o[f.key], f.type) }}</template>
                 </td>
 
-                <td>
+                <td class="settings">
                     <actions-cell v-if="actions" :o="o" :actions="actions" @triggered="onActionTriggered"></actions-cell>
                 </td>
             </tr>
