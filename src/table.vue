@@ -335,7 +335,7 @@ export default defineComponent({
 th.sortable {
     cursor: pointer;
 }
-th.settings {
+td.settings, th.settings {
     text-align: end;
 }
 .blurred {
