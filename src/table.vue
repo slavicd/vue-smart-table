@@ -3,14 +3,7 @@
         <table :class="{table: true, 'table-striped': true, blurred: isLoading}">
             <thead>
             <tr>
-                <th v-if="bulkActionsEnabled"><input type="checkbox" @click="toggleSelectAll" ref="selectall" title="check/uncheck all on page" /></th>
-                <th v-for="col in computedTableHeader" :key="'th_' + col.key" :class="Object.assign({ sortable: col.sortable}, col.classes)"
-                    @click="toggleSorting(col)"
-                >
-                    {{ columnLabel(col) }}
-                    <i v-if="col.sortable" :class="headSortClasses(col)"></i>
-                </th>
-                <th class="settings">
+                <th class="settings non-verbal">
                     <div class="dropdown">
                         <button class="btn btn-sm" data-bs-toggle="dropdown" aria-expanded="false" type="button">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
@@ -28,12 +21,23 @@
                         </ul>
                     </div>
                 </th>
+                <th v-if="bulkActionsEnabled" class="non-verbal"><input type="checkbox" @click="toggleSelectAll" ref="selectall" title="check/uncheck all on page" /></th>
+                <th v-for="col in computedTableHeader" :key="'th_' + col.key" :class="Object.assign({ sortable: col.sortable}, col.classes)"
+                    @click="toggleSorting(col)"
+                >
+                    {{ columnLabel(col) }}
+                    <i v-if="col.sortable" :class="headSortClasses(col)"></i>
+                </th>
             </tr>
             </thead>
 
             <tbody v-if="rows">
             <tr v-for="(o, idx) in rows" :key="o.id" >
-                <td v-if="bulkActionsEnabled">
+                <td class="settings non-verbal">
+                    <actions-cell v-if="actions" :o="o" :actions="actions" @triggered="onActionTriggered"></actions-cell>
+                </td>
+
+                <td v-if="bulkActionsEnabled" class="non-verbal">
                     <input type="checkbox" v-model="selected" :value="o.id" :id="id + '-engros-' + o.id" title="check to perform bulk actions" >
                 </td>
 
@@ -42,10 +46,6 @@
                     :style="f.cellStyle ? f.cellStyle(o) : false">
                     <component v-if="f.component" :is="f.component" :o="o" :data="f.componentData" ></component>
                     <template v-if="!f.component">{{ formatCellValue(o[f.key], f.type) }}</template>
-                </td>
-
-                <td class="settings">
-                    <actions-cell v-if="actions" :o="o" :actions="actions" @triggered="onActionTriggered"></actions-cell>
                 </td>
             </tr>
             </tbody>
@@ -332,21 +332,42 @@ export default defineComponent({
 </script>
 
 <style scoped>
-th.sortable {
-    cursor: pointer;
+table {
+    overflow-wrap: break-word;
+
+    th:not(.non-verbal) {
+        min-width: 4rem;
+    }
+
+    th.sortable {
+        cursor: pointer;
+    }
+
+    td:not(.soft-wrap) {
+        overflow-wrap: anywhere;
+    }
+
+    td.settings,
+    th.settings {
+        text-align: start;
+    }
+    td {
+        max-height: 8rem;
+    }
 }
-td.settings, th.settings {
-    text-align: end;
-}
+
 .blurred {
     opacity: 0.5;
     pointer-events: none;
 }
-tfoot td {
-    padding-top: 1rem;
-    padding-bottom: 1rem;
-}
-tfoot .form-select {
-    max-width: 15rem;
+tfoot {
+    td {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    .form-select {
+        max-width: 10rem;
+    }
 }
 </style>

@@ -420,5 +420,7 @@ export default {
 .tab-content {
     padding: 0.75rem;
     background-color: white;
+
+    overflow-x: auto;
 }
 </style>
