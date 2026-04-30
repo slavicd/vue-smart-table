@@ -155,7 +155,7 @@ export default {
 
         try {
             this.vQuery = this.useRouter ?
-                (this.$route.query.q ? JSON.parse(atob(this.$route.query.q)) : {})
+                (this.$route.query.q ? JSON.parse(decodeURIComponent(this.$route.query.q)) : {})
                 //(this.$route.query.q ? JSON.parse(this.$route.query.q) : {})
                 : Object.assign({}, this.vQuery);
         } catch (error) {
@@ -241,10 +241,6 @@ export default {
             ));
         },
 
-        btoa() {
-            return btoa(JSON.stringify(this.vQuery));
-        },
-
         warning() {
             if (JSON.stringify(this.vQuery).length > 1800) {
                 return 'Sharing this URL might not work reliably because the query is too long.';
@@ -325,7 +321,7 @@ export default {
         updateVQuery(newQuery) {
             this.vQuery = Object.assign({}, toRaw(newQuery));
             if (this.useRouter) {
-                this.$router.push({query: {q: btoa(JSON.stringify(this.vQuery))}});
+                this.$router.push({query: {q: encodeURIComponent(JSON.stringify(this.vQuery))}});
             }
 
             this.fetchRows();
@@ -420,7 +416,5 @@ export default {
 .tab-content {
     padding: 0.75rem;
     background-color: white;
-
-    overflow-x: auto;
 }
 </style>

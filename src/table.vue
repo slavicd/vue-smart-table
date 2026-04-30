@@ -50,7 +50,7 @@
             </tr>
             </tbody>
 
-            <tfoot v-if="bulkActionsEnabled && data?.meta?.total>0">
+            <tfoot v-if="bulkActionsEnabled && bulkActions.length>0 && data?.meta?.total>0">
             <tr>
                 <td :colspan="computedTableHeader.length+2">
                     <div class="input-group">
@@ -211,6 +211,9 @@ export default defineComponent({
         },
 
         bulkActions() {
+            if (!this.actions) {
+                return [];
+            }
             return this.actions.filter(a => typeof(a) === "object" && a.bulk!==false);
         }
     },
